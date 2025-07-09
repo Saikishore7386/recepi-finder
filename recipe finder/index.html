@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recipe Finder - Seasonal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background-color: #f2f2f2;
+      transition: background 0.3s;
+    }
+
+    body.summer { background-color: #fff6d1; }
+    body.winter { background-color: #e6f0ff; }
+    body.spring { background-color: #e8ffe8; }
+    body.autumn { background-color: #fff0e1; }
+
+    h1 { text-align: center; }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    input, select {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+    }
+
+    #recipes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .loader {
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🍴 Recipe Finder</h1>
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Search recipes..." />
+    <select id="seasonFilter">
+      <option value="">All Seasons</option>
+      <option value="summer">Summer</option>
+      <option value="winter">Winter</option>
+      <option value="spring">Spring</option>
+      <option value="autumn">Autumn</option>
+    </select>
+    <button onclick="searchRecipes()">Search</button>
+  </div>
+
+  <div class="loader" id="loader">Loading...</div>
+  <div id="recipes"></div>
+
+  <script>
+    const seasonMap = {
+      summer: ['salad', 'grilled', 'ice', 'cold'],
+      winter: ['soup', 'stew', 'hotpot', 'broth'],
+      spring: ['herb', 'pea', 'asparagus', 'green'],
+      autumn: ['pumpkin', 'apple', 'cider', 'roast']
+    };
+
+    const searchInput = document.getElementById("searchInput");
+    const seasonFilter = document.getElementById("seasonFilter");
+    const recipesDiv = document.getElementById("recipes");
+    const loader = document.getElementById("loader");
+
+    seasonFilter.value = localStorage.getItem("selectedSeason") || "";
+    document.body.className = seasonFilter.value;
+
+    seasonFilter.addEventListener("change", () => {
+      localStorage.setItem("selectedSeason", seasonFilter.value);
+      document.body.className = seasonFilter.value;
+    });
+
+    async function searchRecipes() {
+      const query = searchInput.value.trim();
+      const season = seasonFilter.value;
+      if (!query) return;
+
+      recipesDiv.innerHTML = '';
+      loader.style.display = "block";
+
+      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`);
+      const data = await res.json();
+      loader.style.display = "none";
+
+      if (!data.meals) {
+        recipesDiv.innerHTML = "<p>No recipes found.</p>";
+        return;
+      }
+
+      const filteredMeals = data.meals.filter(meal =>
+        season === "" || seasonMap[season].some(keyword =>
+          meal.strMeal.toLowerCase().includes(keyword)
+        )
+      );
+
+      recipesDiv.innerHTML = filteredMeals.length === 0
+        ? "<p>No seasonal match found.</p>"
+        : filteredMeals.map(meal => `
+            <div class="card">
+              <img src="${meal.strMealThumb}" alt="${meal.strMeal}">
+              <div class="card-body">
+                <h3>${meal.strMeal}</h3>
+                <p><strong>${meal.strCategory}</strong> | ${meal.strArea}</p>
+              </div>
+            </div>
+          `).join("");
+    }
+  </script>
+</body>
+</html>
